@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão de Pátio</title>
+    <style>
+        /* ============================================================
+           DESIGN ORIGINAL PRESERVADO E BLINDADO
+           ============================================================ */
+        body { margin: 0; padding: 0; background-color: #0f172a; color: #cbd5e1; font-family: 'Consolas', 'Courier New', monospace; height: 100vh; display: flex; overflow: hidden; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 4px; }
+
+        .sidebar { width: 260px; background: #0b132b; border-right: 1px solid #1e293b; display: flex; flex-direction: column; box-shadow: 2px 0 15px rgba(0,0,0,0.5); z-index: 10; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
+        .sidebar.collapsed { width: 80px; }
+        .main-panel { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; background: radial-gradient(circle at top right, #0d1424 0%, #07090f 100%); transition: margin-left 0.4s ease; }
+
+        .brand { padding: 20px 15px; border-bottom: 1px solid #1e293b; display: flex; flex-direction: column; align-items: center; background: #080f26; }
+        .brand-text { display: flex; flex-direction: column; align-items: center; transition: opacity 0.2s; width: 100%;}
+        .sidebar.collapsed .brand-text { opacity: 0; pointer-events: none; display: none; }
+        .brand h1 { margin: 0; font-size: 18px; letter-spacing: 2px; color: #f8fafc; font-family: 'Segoe UI', sans-serif;}
+        .brand p { margin: 5px 0 0 0; font-size: 12px; color: #94a3b8; }
+        .status-led { display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); margin-right: 5px; }
+
+        .btn-sair-mini { background: rgba(239, 68, 68, 0.05); color: #ef4444; border: 1px solid #ef4444; border-radius: 6px; padding: 10px 15px; font-size: 12px; font-family: 'Segoe UI', sans-serif; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 20px; box-sizing: border-box; transition: all 0.3s ease; box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); letter-spacing: 1px; }
+        .btn-sair-mini:hover { background: #ef4444; color: #fff; box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+        .sidebar.collapsed .btn-sair-mini { padding: 10px 0; width: 40px; margin-top: 10px; }
+        .sidebar.collapsed .btn-sair-mini .nav-text { display: none; }
+
+        .nav-menu { padding: 10px 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto;}
+        .nav-btn { display: none; width: 100%; padding: 16px 20px; background: transparent; color: #94a3b8; border: none; text-align: left; font-family: 'Segoe UI', sans-serif; font-size: 14px; cursor: pointer; text-transform: uppercase; border-left: 3px solid transparent; transition: 0.2s; font-weight: 600; align-items: center; white-space: nowrap;}
+       
+        .nav-icon { font-size: 20px; min-width: 35px; text-align: center; margin-right: 10px; }
+        .sidebar.collapsed .nav-text { display: none; }
+        .sidebar.collapsed .nav-btn { justify-content: center; padding: 16px 0; border-left: 4px solid transparent; }
+        .sidebar.collapsed .nav-icon { margin-right: 0; }
+
+        .nav-btn:hover { background: rgba(56, 189, 248, 0.05); color: #f8fafc; }
+        .nav-btn.active { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-left: 3px solid #38bdf8; }
+        #btnTabFinalFila.active { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-left: 3px solid #ef4444; }
+       
+        .toggle-btn-bottom { width: 100%; background: #080f26; border: none; border-top: 1px solid #1e293b; color: #38bdf8; font-size: 24px; cursor: pointer; transition: 0.3s; padding: 15px 0; display: flex; justify-content: center; align-items: center; margin-top: auto; }
+
+        .tab-content-area { flex-grow: 1; padding: 25px; position: relative; overflow: hidden; background: transparent; display: flex; flex-direction: column; }
+        .aba { display: none; height: 100%; flex-direction: column; animation: fadeIn 0.3s ease-in-out; }
+        .aba.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        h2 { margin-top: 0; color: #f8fafc; font-weight: 600; font-size: 22px; font-family: 'Segoe UI', sans-serif;}
+        h3 { color: #38bdf8; font-size: 15px; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; font-family: 'Segoe UI', sans-serif; margin-top: 0; font-weight: 600;}
+       
+        input[type="text"], input[type="file"] { width: 100%; padding: 15px; font-size: 18px; background: #1e293b; border: 1px solid #334155; color: #f8fafc; font-family: inherit; box-sizing: border-box; outline: none; transition: 0.3s; border-radius: 6px;}
+        input[type="text"]:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
+        input:disabled { background: #0b101a; color: #64748b; border-color: #ef4444; cursor: not-allowed; }
+
+        /* ============================================================
+           SINAL DE TRÂNSITO: DESTAQUE NEON MÁXIMO NO CHECK-IN
+           ============================================================ */
+        #coletor {
+            font-size: 28px !important;
+            font-weight: bold;
+            padding: 25px !important;
+            border: 4px solid #10b981 !important;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.6), inset 0 0 15px rgba(16, 185, 129, 0.2) !important;
+            background: rgba(16, 185, 129, 0.1) !important;
+            color: #10b981 !important;
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            text-align: center;
+            transition: all 0.3s ease;
+            animation: pulsaVerde 2s infinite alternate;
+        }
+       
+        @keyframes pulsaVerde {
+            0% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), inset 0 0 10px rgba(16, 185, 129, 0.1); }
+            100% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.8), inset 0 0 20px rgba(16, 185, 129, 0.3); }
+        }
+
+        #coletor:focus {
+            box-shadow: 0 0 50px rgba(16, 185, 129, 1), inset 0 0 25px rgba(16, 185, 129, 0.5) !important;
+            background: rgba(16, 185, 129, 0.15) !important;
+            outline: none;
+            animation: none;
+        }
+       
+        #coletor:disabled {
+            border: 5px solid #ff0000 !important;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 1), inset 0 0 30px rgba(255, 0, 0, 0.4) !important;
+            background: rgba(255, 0, 0, 0.15) !important;
+            color: #ff0000 !important;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.8) !important;
+            cursor: wait !important;
+            animation: pulsaVermelho 0.4s infinite alternate;
+        }
+
+        @keyframes pulsaVermelho {
+            0% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.6), inset 0 0 15px rgba(255, 0, 0, 0.2); }
+            100% { box-shadow: 0 0 60px rgba(255, 0, 0, 1), inset 0 0 30px rgba(255, 0, 0, 0.5); }
+        }
+
+        #coletor::placeholder { color: rgba(16, 185, 129, 0.7); font-weight: bold; }
+        #coletor:focus::placeholder { color: transparent; }
+        #coletor:disabled::placeholder { color: #ff0000; opacity: 1; text-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
+
+        .table-wrapper { flex-grow: 1; overflow-y: auto; border: 1px solid #1e293b; background: rgba(0,0,0,0.3); border-radius: 8px; min-height: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
+        table { width: 100%; border-collapse: collapse; color: #cbd5e1; font-size: 14px; font-family: 'Segoe UI', sans-serif;}
+        th { position: sticky; top: 0; background: #0f172a; padding: 14px; text-align: left; border-bottom: 1px solid #334155; color: #94a3b8; z-index: 2; font-weight: 600; font-size: 13px; text-transform: uppercase;}
+        td { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+        .mesas-grid { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: 1fr 320px; gap: 20px; flex-grow: 1; min-height: 0; margin-top: 10px; }
+        .card-radar { grid-column: 1 / 2; grid-row: 1 / 3; display: flex; flex-direction: column; min-height: 0; }
+        .card-decor { grid-column: 2 / 3; grid-row: 1 / 2; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #1e293b; border-radius: 8px; color: #cbd5e1; text-align: center; padding: 20px; min-height: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card-analise { grid-column: 2 / 3; grid-row: 2 / 3; display: flex; flex-direction: column; background: transparent; min-height: 0; }
+
+        .is-mesa-operacao #tabelaAguardandoMesa .rota-text { font-size: 24px !important; color: #fff !important; font-weight: bold; }
+        .is-mesa-operacao #tabelaAguardandoMesa .nome-text { font-size: 16px !important; color: #cbd5e1 !important; }
+        .is-mesa-operacao #tabelaAguardandoMesa .tempo-text { font-size: 20px !important; color: #f59e0b !important; }
+
+        #tabelaAguardandoMesa tr { transition: background 0.2s ease; }
+        #tabelaAguardandoMesa td { border-bottom: 1px solid rgba(56, 189, 248, 0.25); }
+        #tabelaAguardandoMesa tr:hover { background: rgba(56, 189, 248, 0.08); }
+
+        .ff-box { width: 100%; margin-top: 15px; padding: 12px; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; background: rgba(239, 68, 68, 0.05); }
+        .ff-box label { font-size: 11px; color: #ef4444; font-weight: bold; letter-spacing: 1px; display: block; margin-bottom: 8px; }
+        #inputFinalFila { width: 100%; padding: 12px; background: #0b132b; border: 1px solid #ef4444; border-radius: 4px; color: #fff; font-size: 18px; font-weight: bold; text-align: center; text-transform: uppercase; box-sizing: border-box; }
+        #inputFinalFila:focus { border-color: #ff0000; box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+
+        .console-box { background: #020617; border: 1px solid #1e293b; padding: 20px; height: 280px; overflow-y: auto; margin-top: 15px; font-size: 16px; color: #94a3b8; border-radius: 8px; font-family: 'Segoe UI', sans-serif;}
+        .log-linha { margin: 10px 0; border-bottom: 1px dashed #1e293b; padding-bottom: 10px; line-height: 1.5; }
+        .log-ok { color: #10b981; }
+        .log-erro { color: #ef4444; }
+        .log-rota-neon { font-size: 34px; font-weight: 900; color: #00f0ff; text-shadow: 0 0 15px rgba(0, 240, 255, 0.8); margin-left: 10px; vertical-align: middle; letter-spacing: 2px;}
+
+        /* ============================================================
+           TV DESIGN - PRESERVADO
+           ============================================================ */
+        .tv-layout { display: flex; width: 100%; height: 100%; gap: 20px; }
+        .tv-main { flex: 2.5; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #020617; border-radius: 12px; border: 1px solid #1e293b; text-align: center; position: relative; padding: 20px; box-sizing: border-box; overflow: hidden; }
+        .tv-historico { flex: 1; background: #0b101a; border-radius: 12px; border: 1px solid #1e293b; padding: 20px; display: flex; flex-direction: column; overflow: hidden;}
+        .hist-item-tv { border-bottom: 1px solid rgba(239, 68, 68, 0.2); padding: 12px 0; text-align: center; }
+        .hist-item-tv.atend { border-bottom-color: rgba(16, 185, 129, 0.2); }
+        .hist-rota-tv { color: #ef4444; font-size: 26px; font-weight: bold; display: block; margin-bottom: 5px; text-shadow: 0 0 10px rgba(239,68,68,0.3);}
+        .hist-nome-tv { color: #fff; font-size: 11px; text-transform: uppercase; font-family: 'Segoe UI', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .alerta-tv { font-size: clamp(30px, 4vw, 45px); color: #f59e0b; margin-bottom: 2vh; font-family: 'Segoe UI', sans-serif; font-weight: bold; letter-spacing: 4px; text-transform: uppercase; width: 100%; text-align: center;}
+        @keyframes piscaAlerta { 0% { opacity: 0.5; color: #ef4444;} 100% { opacity: 1; color: #ff0000; text-shadow: 0 0 20px #ef4444; } }
+        .placa-tv { font-size: clamp(60px, 7vw, 130px); font-weight: bold; background: #0f172a; padding: 2vh 5vw; border: 2px solid #38bdf8; border-radius: 15px; margin-bottom: 2vh; color: #f8fafc; font-family: 'Segoe UI', sans-serif; max-width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box;}
+        .nome-mtr { font-size: clamp(25px, 3vw, 45px); color: #94a3b8; margin-bottom: 3vh; text-transform: uppercase; font-family: 'Segoe UI', sans-serif; max-width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        #displayBancadaContainer { font-family: 'Segoe UI', sans-serif; font-weight:bold; margin-top: 1vh; text-transform: uppercase; display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; max-width: 100%; }
+        #prefixoMesa { color: #cbd5e1; font-size: clamp(35px, 4vw, 55px); margin-right: 15px; }
+        #displayBancada { font-size: clamp(70px, 8vw, 120px); background-image: linear-gradient(to bottom, #10b981, #77ff77); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 0 8px rgba(16, 185, 129, 0.5); line-height: 1;}
+
+        .btn-padrao { background: transparent; color: #38bdf8; border: 1px solid #38bdf8; padding: 8px 16px; cursor: pointer; font-weight: 600; border-radius: 4px; transition: 0.2s; text-transform: uppercase; font-family: 'Segoe UI', sans-serif;}
+        .btn-padrao:hover { background: #38bdf8; color: #0f172a; }
+        .btn-critico { border-color: #ef4444; color: #ef4444; }
+        .btn-acao { border-color: #10b981; color: #10b981; }
+        .btn-acao:hover { background: #10b981; color: #fff; }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+    <div class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-text">
+                <h1>GESTÃO DE PÁTIO</h1>
+                <p><span class="status-led"></span><span id="txtServidor">CONECTANDO...</span></p>
+                <p style="color:#38bdf8; font-weight:900; margin-top:15px; font-size: 16px; letter-spacing: 1px; text-shadow: 0 0 10px rgba(56, 189, 248, 0.8); text-transform: uppercase;">OP: <span id="dispUser" style="color: #fff; text-shadow: 0 0 12px rgba(255, 255, 255, 0.8);"></span></p>
+            </div>
+            <button type="button" class="btn-sair-mini" onclick="confirmarLogout()" title="Sair do Sistema">
+                <span class="nav-icon nav-icon-logout" style="margin-right: 8px;">🚪</span><span class="nav-text">LOGOUT</span>
+            </button>
+        </div>
+
+        <div class="nav-menu">
+            <button type="button" class="nav-btn" id="btnTabAdmin" onclick="mudarAba('abaAdmin', this)" title="Importação"><span class="nav-icon">📂</span><span class="nav-text">IMPORTAÇÃO</span></button>
+            <button type="button" class="nav-btn" id="btnTabCheckin" onclick="mudarAba('abaCheckin', this)" title="Check-in Portaria"><span class="nav-icon">🛂</span><span class="nav-text">CHECK-IN</span></button>
+            <button type="button" class="nav-btn" id="btnTabTv" onclick="mudarAba('abaTv', this)" title="Monitor TV"><span class="nav-icon">📺</span><span class="nav-text">MONITOR TV</span></button>
+            <button type="button" class="nav-btn" id="btnTabMesas" onclick="mudarAba('abaMesas', this)" title="Atendimento"><span class="nav-icon">🎯</span><span class="nav-text">ATENDIMENTO</span></button>
+            <button type="button" class="nav-btn" id="btnTabRadar" onclick="mudarAba('abaRadar', this)" title="Radar Global"><span class="nav-icon">🌍</span><span class="nav-text">RADAR GLOBAL</span></button>
+            <button type="button" class="nav-btn" id="btnTabFinalFila" onclick="mudarAba('abaFinalFila', this)" title="Final de Fila"><span class="nav-icon">🚨</span><span class="nav-text">FINAL DE FILA</span></button>
+            <button type="button" class="nav-btn" id="btnTabControle" onclick="mudarAba('abaControle', this)" title="Controle de Mesas"><span class="nav-icon">🔐</span><span class="nav-text">MESAS</span></button>
+        </div>
+
+        <button type="button" class="toggle-btn-bottom" onclick="toggleSidebar()" title="Expandir/Recolher Menu">☰</button>
+    </div>
+
+    <div class="main-panel">
+        <div class="tab-content-area">
+           
+            <div id="abaAdmin" class="aba">
+                <h2>GESTÃO DE DADOS (IMPORT)</h2>
+                <div style="margin-top:20px; padding:25px; background:#1e293b; border-radius: 8px;">
+                    <input type="file" id="importArquivo" accept=".xlsx, .xls">
+                    <button type="button" class="btn-padrao btn-acao" style="width: 100%; margin-top: 15px;" onclick="aplicarImportacao()">APLICAR IMPORTAÇÃO EXCEL</button>
+                </div>
+                <div style="margin-top:auto; padding-top:20px; display: flex; justify-content: space-between;">
+                    <button type="button" class="btn-padrao btn-critico" onclick="limparDados()">ZERAR DIA</button>
+                </div>
+            </div>
+
+            <div id="abaControle" class="aba">
+                <h2 style="color: #38bdf8;">🔐 CONTROLE DE MESAS</h2>
+                <p style="color:#94a3b8; font-size:12px; margin-top:5px;">Gerencie e libere mesas que ficaram presas no servidor.</p>
+                <div style="display: flex; gap: 20px; margin-top: 15px; height: 100%;">
+                    <div style="flex: 1; background: #0b132b; border: 1px solid #1e293b; border-radius: 8px; padding: 20px; display: flex; flex-direction: column;">
+                        <h3 style="color: #cbd5e1; border-bottom: 1px dashed #334155; padding-bottom: 10px;">🖥️ MESAS OCUPADAS ATUALMENTE</h3>
+                        <div class="table-wrapper" style="margin-top: 10px;">
+                            <table>
+                                <thead><tr><th>NOME DA MESA</th><th align="right">AÇÃO</th></tr></thead>
+                                <tbody id="tabelaMesasAdmin"></tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn-padrao btn-critico" style="margin-top: 15px; width: 100%; font-size: 11px;" onclick="destravarMesas()">DESLOGAR TODAS AS MESAS FORÇADAMENTE</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="abaCheckin" class="aba">
+                <h2>PORTARIA DE ACESSO (CHECK-IN)</h2>
+                <p style="color:#94a3b8; font-size:14px; margin-bottom: 20px;">Realize a leitura do ID do motorista para enviá-lo ao radar.</p>
+                <input type="text" id="coletor" placeholder="VERDE: PODE BIPAR O ID AQUI..." autocomplete="off">
+                <div style="margin-top: 25px;">
+                    <label style="font-family: 'Segoe UI'; font-weight: 600; font-size: 12px; color: #64748b; letter-spacing: 1px;">CONSOLE DE REGISTRO:</label>
+                    <div class="console-box" id="consoleLog">
+                        <div class="log-linha">SISTEMA INICIADO. AGUARDANDO BIPE.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="abaMesas" class="aba">
+                <div class="mesas-grid">
+                    <div class="card-radar">
+                        <h3>📡 FILA DE ESPERA (A1-Z24)</h3>
+                        <div class="table-wrapper"><table id="tabelaAguardandoMesa"><thead><tr><th>ROTA / MOTORISTA</th><th>ESPERA</th><th>AÇÃO</th></tr></thead><tbody></tbody></table></div>
+                    </div>
+                    <div class="card-decor">
+                        <div style="font-size: 35px; color: #38bdf8;">🖥️</div>
+                        <h3 id="displayNomeMesaGrande">MESA</h3>
+                        <div class="ff-box">
+                            <label>🚨 FINAL DE FILA (ROTA)</label>
+                            <input type="text" id="inputFinalFila" placeholder="DIGITAR ROTA..." oninput="this.value = this.value.toUpperCase()" onkeypress="if(event.key === 'Enter') { event.preventDefault(); addRotaFinalFila(); }">
+                            <button type="button" class="btn-padrao btn-critico" style="width:100%; margin-top:10px;" onclick="addRotaFinalFila()">SALVAR REGRA</button>
+                        </div>
+                    </div>
+                    <div class="card-analise">
+                        <h3 style="color: #10b981;">🟢 EM ANÁLISE</h3>
+                        <div class="table-wrapper"><table><thead><tr><th>ROTA</th><th>TEMPO</th><th align="right">AÇÃO</th></tr></thead><tbody id="tabelaMinhaMesa"></tbody></table></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="abaTv" class="aba" style="padding: 0;">
+                <div class="tv-layout">
+                   
+                    <div class="tv-historico">
+                        <h3 style="color:#10b981; border-bottom:1px dashed rgba(16, 185, 129, 0.5); padding-bottom:10px; text-align:center;">🟢 EM ATENDIMENTO</h3>
+                        <div id="tvEmAtendimentoLista" style="overflow-y: auto; flex-grow: 1;"></div>
+                    </div>
+
+                    <div class="tv-main">
+                        <button type="button" id="btnAtivarVoz" onclick="ativarVozTV()" style="padding:10px; background:#38bdf8; border:none; cursor:pointer; border-radius:4px; font-weight:bold; position:absolute; top:20px; left:20px; z-index:100;">Ligar Áudio da TV</button>
+                        <div class="alerta-tv" id="textoAlerta">PAINEL STANDBY</div>
+                        <div class="placa-tv" id="displayPlaca">---</div>
+                        <div class="nome-mtr" id="displayNomeMotorista">AGUARDANDO...</div>
+                        <div id="displayBancadaContainer" style="display:none;">
+                            <span id="prefixoMesa">DIRIJA-SE À</span>
+                            <span id="displayBancada"></span>
+                        </div>
+                    </div>
+
+                    <div class="tv-historico">
+                        <h3 style="color:#ef4444; border-bottom:1px dashed rgba(239, 68, 68, 0.5); padding-bottom:10px; text-align:center;">🚨 RETIDOS (FINAL)</h3>
+                        <div id="tvFinalFilaLista" style="overflow-y: auto; flex-grow: 1;"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="abaRadar" class="aba">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">RADAR GLOBAL (TEMPO REAL)</h2>
+                    <div style="background: #1e293b; border: 1px solid #334155; padding: 10px 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px;">TEMPO MÉD. ATENDIMENTO</div>
+                        <div id="displayTempoMedio" style="font-size: 22px; font-weight: bold; color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);">00m 00s</div>
+                    </div>
+                </div>
+                <div class="table-wrapper"><table><thead><tr><th>ROTA / MOTORISTA</th><th>MESA</th><th>STATUS</th><th>DURAÇÃO</th></tr></thead><tbody id="tabelaDashboard"></tbody></table></div>
+            </div>
+
+            <div id="abaFinalFila" class="aba">
+                <h2 style="color: #ef4444;">🚨 GESTÃO: FINAL DE FILA</h2>
+                <div class="table-wrapper" style="border-color: rgba(239,68,68,0.3);">
+                    <table><thead><tr><th>ROTA / MOTORISTA</th><th>CHECK-IN</th><th align="right">AÇÃO</th></tr></thead><tbody id="tabelaFinalFilaAdmin"></tbody></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURAÇÃO ANTIGA (UBERABA) - SALVA AQUI
+        // ==========================================
+        /*
+        const firebaseConfigUberaba = {
+            apiKey: "AIzaSyDFQPqoRF6BZm76yAioqhaoOzf8aSjijyU",
+            authDomain: "gestao-de-doca.firebaseapp.com",
+            databaseURL: "https://gestao-de-doca-default-rtdb.firebaseio.com",
+            projectId: "gestao-de-doca",
+            storageBucket: "gestao-de-doca.firebasestorage.app",
+            messagingSenderId: "574246315988",
+            appId: "1:574246315988:web:eacaaef9a2fc82393e9841",
+            measurementId: "G-QWJNRFZBX5"
+        };
+        */
+
+        // ==========================================
+        // NOVA CONFIGURAÇÃO (UBERLÂNDIA - ATIVA)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDDk9scpOgG9mDTcw5kzWsPzHOo5roEiPM",
+            authDomain: "fila-driver-44.firebaseapp.com",
+            databaseURL: "https://fila-driver-44-default-rtdb.firebaseio.com",
+            projectId: "fila-driver-44",
+            storageBucket: "fila-driver-44.firebasestorage.app",
+            messagingSenderId: "393060281340",
+            appId: "1:393060281340:web:9e4c84e1f7b6ef200aa079",
+            measurementId: "G-69ZXHCZX3R"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const uAtu = sessionStorage.getItem('usuarioLogado'), lAtu = sessionStorage.getItem('lugarLogado');
+       
+        let veiculos = [], rFF = [], listaMesas = [];
+        let audioFila = [], estaFalando = false, uDataChamada = 0;
+
+        if (!uAtu) window.location.href = "index.html";
+        document.getElementById('dispUser').innerText = uAtu;
+
+        const bA=document.getElementById('btnTabAdmin'), bC=document.getElementById('btnTabCheckin'), bT=document.getElementById('btnTabTv'), bM=document.getElementById('btnTabMesas'), bR=document.getElementById('btnTabRadar'), bF=document.getElementById('btnTabFinalFila'), bCtrl=document.getElementById('btnTabControle');
+
+        if(lAtu === 'Admin') {
+            [bA, bC, bT, bM, bR, bF, bCtrl].forEach(b => { if(b) b.style.display = 'flex'; });
+            if(bA) bA.click();
+        } else {
+            document.body.classList.add('is-mesa-operacao');
+            if(bM) { bM.style.display = 'flex'; bM.click(); }
+            let dNome = document.getElementById('displayNomeMesaGrande');
+            if(dNome && lAtu) dNome.innerText = lAtu.toUpperCase();
+
+            if(bA) bA.remove(); if(bC) bC.remove(); if(bT) bT.remove();
+            if(bR) bR.remove(); if(bF) bF.remove(); if(bCtrl) bCtrl.remove();
+
+            db.ref('mesasOcupadas').once('value').then(s => {
+                let ocupadas = s.val() || [];
+                if(lAtu && !ocupadas.includes(lAtu)) {
+                    ocupadas.push(lAtu);
+                    db.ref('mesasOcupadas').set(ocupadas);
+                }
+            });
+        }
+
+        db.ref('veiculos').on('value', s => { veiculos = s.val() || []; renderizarTelas(); });
+        db.ref('rotasFinalFila').on('value', s => { rFF = s.val() || []; });
+        db.ref('mesasOcupadas').on('value', s => { listaMesas = s.val() || []; renderizarControleMesas(); });
+       
+        db.ref('tvComando').on('value', s => {
+            const d = s.val();
+            if(d && d.data > uDataChamada) { uDataChamada = d.data; audioFila.push(d); processarFilaAudio(); }
+        });
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
+        function mudarAba(id, b) { document.querySelectorAll('.aba').forEach(a=>a.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(btn=>btn.classList.remove('active')); document.getElementById(id).classList.add('active'); b.classList.add('active'); if(id==='abaCheckin') setTimeout(()=>document.getElementById('coletor').focus(),100); }
+       
+        window.confirmarLogout = function() {
+            if(confirm("Deseja realmente sair do sistema e liberar sua mesa?")) {
+                fazerLogout();
+            }
+        };
+
+        function fazerLogout() {
+            if(lAtu && lAtu !== 'Admin') {
+                db.ref('mesasOcupadas').once('value').then((snapshot) => {
+                    let ocupadas = snapshot.val() || [];
+                    ocupadas = ocupadas.filter(m => m !== lAtu);
+                    db.ref('mesasOcupadas').set(ocupadas).then(() => {
+                        sessionStorage.clear();
+                        window.location.href = "index.html";
+                    });
+                });
+            } else {
+                sessionStorage.clear();
+                window.location.href = "index.html";
+            }
+        }
+
+        window.aplicarImportacao = function() {
+            let input = document.getElementById('importArquivo');
+            if(!input.files[0]) return alert("Por favor, selecione um arquivo Excel (.xlsx) primeiro!");
+
+            const reader = new FileReader();
+            reader.onload = function(evento) {
+                try {
+                    let data = new Uint8Array(evento.target.result);
+                    let workbook = XLSX.read(data, {type: 'array'});
+                   
+                    let nomeAbaCorreta = workbook.SheetNames.find(n => n.trim().toUpperCase() === 'PÁTIO' || n.trim().toUpperCase() === 'PATIO');
+                   
+                    if (!nomeAbaCorreta) {
+                        return alert("ERRO: A aba 'Pátio' não foi encontrada no arquivo Excel. Renomeie a aba e tente novamente.");
+                    }
+
+                    let sheet = workbook.Sheets[nomeAbaCorreta];
+                    let linhas = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
+
+                    let dbTemp = [...veiculos];
+                    let count = 0;
+
+                    for(let i = 1; i < linhas.length; i++) {
+                        let colunas = linhas[i];
+                        if(!colunas || colunas.length === 0) continue;
+
+                        let nome = String(colunas[0] || "").trim().toUpperCase();
+                        let id = String(colunas[1] || "").trim().toUpperCase();
+                        let rota = String(colunas[2] || "").trim().toUpperCase();
+
+                        if(id && id !== 'ID' && !dbTemp.find(v => v.id === id)) {
+                            dbTemp.push({
+                                id: id,
+                                rota: rota || "SEM ROTA",
+                                nome: nome || "MOTORISTA DESCONHECIDO",
+                                status: 'NO_PERÍMETRO',
+                                chegada: null,
+                                horaChamada: null,
+                                horaFinalizado: null,
+                                finalizado: false,
+                                mesaResponsavel: ''
+                            });
+                            count++;
+                        }
+                    }
+
+                    if(count > 0) {
+                        db.ref('veiculos').set(dbTemp);
+                        alert(`✅ IMPORTAÇÃO DO EXCEL CONCLUÍDA!\n${count} motoristas adicionados com sucesso.`);
+                    } else {
+                        alert("⚠️ Nenhum registro importado. Verifique se há dados a partir da linha 2 e se a Coluna B possui IDs.");
+                    }
+                   
+                    input.value = '';
+
+                } catch (error) {
+                    alert("Erro ao processar o arquivo Excel. Verifique se o arquivo não está corrompido.");
+                    console.error(error);
+                }
+            };
+           
+            reader.readAsArrayBuffer(input.files[0]);
+        };
+
+        function renderizarControleMesas() {
+            const tM = document.getElementById('tabelaMesasAdmin');
+            if(!tM) return;
+            tM.innerHTML = '';
+            if(listaMesas.length === 0) { tM.innerHTML = `<tr><td colspan="2" align="center" style="color:#64748b; padding: 20px;">TODAS AS MESAS ESTÃO LIVRES.</td></tr>`; }
+            else { listaMesas.forEach(m => { tM.innerHTML += `<tr><td style="color:#38bdf8; font-weight:bold;">${m.toUpperCase()}</td><td align="right"><button type="button" class="btn-padrao btn-critico" style="padding: 4px 8px; font-size:10px;" onclick="desconectarMesa('${m}')">DESLOGAR</button></td></tr>`; }); }
+        }
+
+        window.desconectarMesa = function(m) { if(confirm(`Liberar a ${m}?`)) { let t = listaMesas.filter(x => x !== m); db.ref('mesasOcupadas').set(t); } };
+        window.destravarMesas = function() { if(confirm("Liberar todas as mesas forçadamente?")) db.ref('mesasOcupadas').set(null); };
+
+        function processarFilaAudio() {
+            if (estaFalando || audioFila.length === 0) return;
+            estaFalando = true;
+            const d = audioFila.shift();
+            document.getElementById('displayPlaca').innerText = d.rota;
+            document.getElementById('displayNomeMotorista').innerText = d.nome;
+            document.getElementById('displayBancada').innerText = d.mesa.toUpperCase().replace('MESA ', '');
+            document.getElementById('displayBancadaContainer').style.display = 'block';
+            document.getElementById('textoAlerta').style.animation = 'piscaAlerta 1s infinite alternate';
+            document.getElementById('textoAlerta').innerText = "ATENÇÃO: DESLOCAMENTO";
+           
+            let abaTv = document.getElementById('abaTv');
+            if (lAtu === 'Admin' && abaTv && abaTv.classList.contains('active')) {
+                window.speechSynthesis.cancel();
+                let u = new SpeechSynthesisUtterance(`Atenção motorista ${d.nome}, rota ${d.rota}. Dirija-se à ${d.mesa}.`);
+                u.lang = 'pt-BR'; u.onend = () => { estaFalando = false; setTimeout(processarFilaAudio, 1000); };
+                window.speechSynthesis.speak(u);
+            } else { setTimeout(() => { estaFalando = false; processarFilaAudio(); }, 5000); }
+        }
+
+        window.addRotaFinalFila = function() {
+            let vRota = document.getElementById('inputFinalFila').value.trim().toUpperCase();
+            if(vRota) {
+                let vt = [...veiculos];
+                let atualizouVeiculo = false;
+
+                vt.forEach(x => {
+                    if(x.status === 'EM_ATENDIMENTO' && x.mesaResponsavel === lAtu) {
+                        x.status = 'FINALIZADO';
+                        x.horaFinalizado = Date.now();
+                        atualizouVeiculo = true;
+                    }
+                    if(x.rota === vRota && x.status === 'AGUARDANDO') {
+                        x.status = 'FINAL_FILA';
+                        x.chegada = Date.now();
+                        atualizouVeiculo = true;
+                    }
+                });
+
+                if(atualizouVeiculo) {
+                    db.ref('veiculos').set(vt);
+                }
+
+                let f = [...rFF];
+                if(!f.includes(vRota)) {
+                    f.push(vRota);
+                    db.ref('rotasFinalFila').set(f);
+                    alert("Rota Penalizada! O motorista irá para o final da fila quando bipar (ou se já estiver aguardando).");
+                } else {
+                    alert("Esta rota já possui regra de punição ativa.");
+                }
+
+                document.getElementById('inputFinalFila').value = '';
+            }
+        };
+
+        window.liberarFinalFila = function(id) {
+            let vt = [...veiculos], v = vt.find(x => x.id === id);
+            if(v) { v.status = 'AGUARDANDO'; v.chegada = Date.now(); db.ref('veiculos').set(vt); }
+        };
+
+        window.chamarVeiculo = function(id) {
+            let vt = [...veiculos];
+            vt.forEach(x => { if(x.status === 'EM_ATENDIMENTO' && x.mesaResponsavel === lAtu) { x.status = 'FINALIZADO'; x.horaFinalizado = Date.now(); }});
+            let v = vt.find(x => x.id === id);
+            if(v) { v.status = 'EM_ATENDIMENTO'; v.mesaResponsavel = lAtu; v.horaChamada = Date.now(); db.ref('veiculos').set(vt); db.ref('tvComando').set({ id: v.id, rota: v.rota, nome: v.nome, mesa: lAtu, data: Date.now() }); }
+        };
+
+        window.penalizarVeiculo = function(id) {
+            if(confirm("O motorista não compareceu? Enviar para o Final de Fila?")) {
+                let vt = [...veiculos];
+                let v = vt.find(x => x.id === id);
+                if(v) {
+                    v.status = 'FINAL_FILA';
+                    v.chegada = Date.now();
+                    v.mesaResponsavel = '';
+                    db.ref('veiculos').set(vt);
+                    let f = [...rFF];
+                    if(!f.includes(v.rota)) { f.push(v.rota); db.ref('rotasFinalFila').set(f); }
+                }
+            }
+        };
+
+        window.limparDados = function() {
+            if(confirm("ATENÇÃO: Isso apagará TODOS os dados, histórico e check-ins do dia. Deseja continuar?")) {
+                db.ref('veiculos').set(null);
+                db.ref('rotasFinalFila').set(null);
+                db.ref('tvComando').set(null);
+
+                const consoleBox = document.getElementById('consoleLog');
+                if(consoleBox) consoleBox.innerHTML = '<div class="log-linha">SISTEMA ZERADO. AGUARDANDO NOVA IMPORTAÇÃO.</div>';
+
+                const dPlaca = document.getElementById('displayPlaca');
+                if(dPlaca) {
+                    dPlaca.innerText = "---";
+                    document.getElementById('displayNomeMotorista').innerText = "AGUARDANDO...";
+                    document.getElementById('displayBancadaContainer').style.display = 'none';
+                    document.getElementById('textoAlerta').innerText = "PAINEL STANDBY";
+                    document.getElementById('textoAlerta').style.animation = 'none';
+                }
+                alert("Sistema zerado com sucesso! Pronto para o próximo dia.");
+            }
+        };
+
+        function formatarTempoLive(ms) { if(!ms || ms < 0) return "0m 00s"; let s = Math.floor(ms/1000), m = Math.floor(s/60); return `${m}m ${s%60 < 10 ? '0' : ''}${s%60}s`; }
+
+        function ordenarAlfanumerica(lista) {
+            return lista.sort((a, b) => {
+                let matchA = a.rota.match(/([A-Z]+)\D*(\d+)/i), matchB = b.rota.match(/([A-Z]+)\D*(\d+)/i);
+                if (matchA && matchB) {
+                    if (matchA[1] !== matchB[1]) return matchA[1].localeCompare(matchB[1]);
+                    return parseInt(matchA[2]) - parseInt(matchB[2]);
+                }
+                return a.rota.localeCompare(b.rota);
+            });
+        }
+
+        function renderizarTelas() {
+            const tD = document.getElementById('tabelaDashboard'), tA = document.querySelector('#tabelaAguardandoMesa tbody'),
+                  tM = document.getElementById('tabelaMinhaMesa'), tF = document.getElementById('tabelaFinalFilaAdmin');
+           
+            const lAtendTV = document.getElementById('tvEmAtendimentoLista');
+            const lFilaTV = document.getElementById('tvFinalFilaLista');
+            const elTempoMedio = document.getElementById('displayTempoMedio');
+
+            [tD, tA, tM, tF].forEach(t => { if(t) t.innerHTML = ''; });
+            let ag = Date.now();
+           
+            let aguardando = veiculos.filter(v =>
+                v.status === 'AGUARDANDO' ||
+                (v.status === 'EM_ATENDIMENTO' && (ag - v.horaChamada < 7000))
+            );
+            aguardando = ordenarAlfanumerica(aguardando);
+           
+            let totalTempoMs = 0;
+            let qtdFinalizados = 0;
+
+            veiculos.forEach(v => {
+                if(v.status === 'NO_PERÍMETRO') return;
+               
+                let dur = (v.status === 'FINALIZADO') ? (v.horaFinalizado - v.horaChamada) : (ag - (v.horaChamada || v.chegada));
+               
+                if(v.status === 'FINALIZADO' && v.horaFinalizado && v.horaChamada) {
+                    totalTempoMs += (v.horaFinalizado - v.horaChamada);
+                    qtdFinalizados++;
+                }
+               
+                if(tD) tD.innerHTML += `<tr><td>${v.rota}<br><small>${v.nome}</small></td><td>${v.mesaResponsavel || '-'}</td><td>${v.status}</td><td>${formatarTempoLive(dur)}</td></tr>`;
+               
+                if(v.status === 'EM_ATENDIMENTO' && v.mesaResponsavel === lAtu && tM) {
+                    tM.innerHTML += `<tr>
+                        <td>${v.rota}</td>
+                        <td>${formatarTempoLive(ag - v.horaChamada)}</td>
+                        <td align="right">
+                            <button type="button" class="btn-padrao" style="border-color:#f59e0b; color:#f59e0b;" onclick="penalizarVeiculo('${v.id}')" title="Enviar para Final de Fila">RETIDO</button>
+                        </td>
+                    </tr>`;
+                }
+
+                if(v.status === 'FINAL_FILA' && tF) tF.innerHTML += `<tr><td style="color:#ef4444; font-weight:bold;">${v.rota}<br><small style="color:#fff;">${v.nome}</small></td><td>${new Date(v.chegada).toLocaleTimeString()}</td><td align="right"><button type="button" class="btn-padrao" onclick="liberarFinalFila('${v.id}')">LIBERAR</button></td></tr>`;
+            });
+
+            if(elTempoMedio) {
+                if(qtdFinalizados > 0) {
+                    elTempoMedio.innerText = formatarTempoLive(totalTempoMs / qtdFinalizados);
+                } else {
+                    elTempoMedio.innerText = "00m 00s";
+                }
+            }
+
+            aguardando.forEach(v => {
+                let isCongelado = v.status === 'EM_ATENDIMENTO' && (ag - v.horaChamada < 7000);
+               
+                if (isCongelado) {
+                    if(tA) tA.innerHTML += `<tr style="background: rgba(239, 68, 68, 0.1);">
+                        <td class="rota-text" style="opacity: 0.5;">${v.rota}<br><span class="nome-text">${v.nome}</span></td>
+                        <td class="tempo-text" style="opacity: 0.5;">${formatarTempoLive(ag - v.chegada)}</td>
+                        <td><div style="background:#ef4444; border: 1px solid #ef4444; border-radius:4px; height: 35px; width: 100%; box-sizing: border-box; box-shadow: 0 0 10px rgba(239,68,68,0.4);"></div></td>
+                    </tr>`;
+                } else {
+                    if(tA) tA.innerHTML += `<tr>
+                        <td class="rota-text">${v.rota}<br><span class="nome-text">${v.nome}</span></td>
+                        <td class="tempo-text">${formatarTempoLive(ag - v.chegada)}</td>
+                        <td><button type="button" class="btn-padrao" onclick="chamarVeiculo('${v.id}')">PUXAR</button></td>
+                    </tr>`;
+                }
+            });
+
+            if(lAtendTV) {
+                let atendTV = veiculos.filter(v => v.status === 'EM_ATENDIMENTO').sort((a, b) => b.horaChamada - a.horaChamada).slice(0, 14);
+                let hAtend = '';
+                atendTV.forEach(v => {
+                    hAtend += `<div class="hist-item-tv atend">
+                                  <span class="hist-rota-tv" style="color:#10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);">${v.rota}</span>
+                                  <span class="hist-nome-tv" style="font-size:11px;">${v.nome}</span>
+                                  <span style="color:#10b981; font-size:26px; font-weight:bold; display:block; margin-top:5px; letter-spacing:1px; text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);">${v.mesaResponsavel.toUpperCase()}</span>
+                               </div>`;
+                });
+                lAtendTV.innerHTML = hAtend || '<center style="color:#4a5568; margin-top:20px;">NENHUM EM ATENDIMENTO</center>';
+            }
+
+            if(lFilaTV) {
+                let finalTV = veiculos.filter(v => v.status === 'FINAL_FILA').sort((a, b) => a.chegada - b.chegada).slice(0, 10);
+                let hFim = '';
+                finalTV.forEach(v => {
+                    hFim += `<div class="hist-item-tv">
+                               <span class="hist-rota-tv">${v.rota}</span>
+                               <span class="hist-nome-tv" style="font-size:11px;">${v.nome}</span>
+                             </div>`;
+                });
+                lFilaTV.innerHTML = hFim || '<center style="color:#4a5568; margin-top:20px;">NENHUM RETIDO</center>';
+            }
+        }
+
+        document.getElementById('coletor')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+               
+                const id = this.value.trim().toUpperCase();
+                if(id) {
+                    this.disabled = true;
+                    let placeholderOriginal = "VERDE: PODE BIPAR O ID AQUI...";
+                    this.placeholder = "PROCESSANDO... AGUARDE 3 SEGUNDOS.";
+
+                    let vt = [...veiculos], v = vt.find(x => x.id === id);
+                    const consoleBox = document.getElementById('consoleLog');
+                    const dataHora = new Date().toLocaleTimeString();
+
+                    if (!v) {
+                        consoleBox.innerHTML += `<div class="log-linha log-erro">[${dataHora}] > ERRO: ID [${id}] NÃO ENCONTRADO.</div>`;
+                    } else if (v.status !== 'NO_PERÍMETRO') {
+                        consoleBox.innerHTML += `<div class="log-linha" style="color: #f59e0b;">[${dataHora}] > AVISO: MOTORISTA JÁ FEZ CHECK-IN.</div>`;
+                    } else {
+                        v.status = rFF.includes(v.rota) ? 'FINAL_FILA' : 'AGUARDANDO';
+                        v.chegada = Date.now();
+                        db.ref('veiculos').set(vt);
+                       
+                        let spanRota = `<span class="log-rota-neon">${v.rota}</span>`;
+                        let msg = rFF.includes(v.rota) ? `⚠️ ROTA PENALIZADA: ${spanRota}` : `CHECK-IN OK: ${spanRota}`;
+                        let cor = rFF.includes(v.rota) ? "log-erro" : "log-ok";
+                        consoleBox.innerHTML += `<div class="log-linha ${cor}">[${dataHora}] > ${msg}</div>`;
+                    }
+                    consoleBox.scrollTop = consoleBox.scrollHeight;
+
+                    setTimeout(() => {
+                        this.value = '';
+                        this.placeholder = placeholderOriginal;
+                        this.disabled = false;
+                        this.focus();
+                    }, 3000);
+                }
+            }
+        });
+
+        setInterval(renderizarTelas, 1000);
+        window.ativarVozTV = function() { document.getElementById('btnAtivarVoz').style.display = 'none'; window.speechSynthesis.speak(new SpeechSynthesisUtterance("")); };
+    </script>
+</body>
+</html>
